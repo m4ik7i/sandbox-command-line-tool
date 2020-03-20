@@ -1,37 +1,35 @@
-type UnitResult = Result<(), Box<dyn std::error::Error>>;
+use clap::{crate_name, crate_version, App};
 
-fn main() -> UnitResult {
-    // let commands = vec![("ls", "")];
+type Error = Box<dyn std::error::Error + Send + Sync>;
+type Result<T, E = Error> = std::result::Result<T, E>;
 
-    // for (command, args) in commands {
-    //     execute(command, args)?
-    // }
+fn main() -> Result<()> {
+    let app = App::new(crate_name!()).version(crate_version!());
+    let _ = app.get_matches();
 
-    execute("ls", "")?;
-    execute("rustc", "--version")?;
+    exec("ls", vec![])?;
+    exec("rustc", vec!["--version"])?;
 
     Ok(())
 }
 
-fn execute(command: &str, args: &str) -> UnitResult {
-    let output_binary = std::process::Command::new(command)
-        .args(args.split_whitespace().collect::<Vec<_>>())
-        .output()?
-        .stdout;
+use std::ffi::OsStr;
+use std::io::{self, Write};
+use std::process::Command;
 
-    use std::io::Write;
-    std::io::stdout().lock().write(&output_binary)?;
+fn exec<I, S>(command: S, args: I) -> io::Result<()>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let output = Command::new(command).args(args).output()?;
 
-    // let output = String::from_utf8(output_binary)?;
+    io::stdout().lock().write_all(&output.stdout)?;
 
-    // let mut output_iter = output.split("\n").enumerate();
-
-    // while let Some((index, line)) = output_iter.next() {
-    //     if index != 0 {
-    //         println!("");
-    //     }
-    //     print!("{}", line);
-    // }
+    if !output.status.success() {
+        println!("status: {}", output.status);
+        io::stderr().lock().write_all(&output.stderr)?;
+    }
 
     Ok(())
 }
