@@ -30,6 +30,12 @@ fn main() -> Result<()> {
     };
     write_stdout(&output)?;
 
+    let output = Command::new("ls").args(&["-l"]).output()?;
+    if !output.status.success() {
+        write_stderr(&output)?;
+    };
+    write_stdout(&output)?;
+
     Ok(())
 }
 
